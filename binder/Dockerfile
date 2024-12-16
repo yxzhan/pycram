@@ -40,28 +40,26 @@ RUN chmod +x /usr/local/src/robot/scripts/kill_icub.sh
 RUN chmod +x /usr/local/src/robot/scripts/run_icub.sh
 
 # installing pycram
+RUN mkdir -p $SOURCE_FOLDER/catkin_ws/src
 WORKDIR $SOURCE_FOLDER/catkin_ws/src
 RUN vcs import --input https://raw.githubusercontent.com/cram2/pycram/dev/pycram-https.rosinstall --recursive
+RUN rm -rf $SOURCE_FOLDER/catkin_ws/src/pycram
+COPY --chown=${NB_USER}:users . $SOURCE_FOLDER/catkin_ws/src/pycram
+RUN cp -r /tmp/icub-pycram-docker/icub_model $SOURCE_FOLDER/catkin_ws/src/icub_model
+WORKDIR $SOURCE_FOLDER/catkin_ws/src/pycram
+RUN git submodule init
+RUN git submodule update
+RUN pip install -r requirements.txt
 
 USER root
+WORKDIR $SOURCE_FOLDER/catkin_ws
 RUN rosdep update
 RUN rosdep install -y --ignore-src --from-paths . -r
 
 USER ${NB_USER}
 WORKDIR $SOURCE_FOLDER/catkin_ws
 RUN /bin/bash -c "source /usr/local/src/robot/robotology-superbuild/build/install/share/robotology-superbuild/setup.sh &&\
-       source /opt/ros/noetic/setup.bash && catkin_make"
-
-RUN cp -r /tmp/icub-pycram-docker/icub_model $SOURCE_FOLDER/catkin_ws/src/icub_model
-COPY --chown=${NB_USER}:users . $SOURCE_FOLDER/catkin_ws/src/pycram
-WORKDIR $SOURCE_FOLDER/catkin_ws/src/pycram
-RUN git submodule init
-RUN git submodule update
-
-RUN pip3 install -r requirements.txt
-WORKDIR $SOURCE_FOLDER/catkin_ws
-RUN /bin/bash -c "source /usr/local/src/robot/robotology-superbuild/build/install/share/robotology-superbuild/setup.sh &&\
-       source /opt/ros/noetic/setup.bash && catkin_make"
+       source /opt/ros/noetic/setup.bash && catkin build"
 
 RUN echo 'source /usr/local/src/robot/robotology-superbuild/build/install/share/robotology-superbuild/setup.sh' >> ~/.bashrc
 RUN echo 'source /opt/ros/noetic/setup.bash' >> ~/.bashrc
